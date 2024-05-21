@@ -30,6 +30,9 @@ exports.login = async (req, res) => {
             })
         }
 
+        
+        
+
         const user = await User.findOne({ email });
         if (!user || !(await user.isPasswordMatch(password))) {
             return res.status(401).json({ message: 'Invalid email or password' });
@@ -51,11 +54,12 @@ exports.login = async (req, res) => {
     }
 };
 
-// [POST] api/v1/user/
+// [GET] api/v1/user/current
 exports.getUser = async (req, res) => {
     try {
         const { _id } = req.user;
-        const user = await User.findById(_id).select('-refreshToken -password -role');
+        console.log(req.user)
+        const user = await User.findById(_id).lean().select('-refreshToken -password -role');
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
         }
@@ -82,62 +86,23 @@ exports.logout = async (req, res, next) => {
             secure: true, // only send HTTPS (if using)
         });
 
-        if (!user) 
+        if (!user)
             return res.sendStatus(204);
 
         // clear refreshToken from database
         user.refreshToken = undefined;
         await user.save();
-        
+
         res.status(200).json({ message: 'Logged out successfully' });
     } catch (error) {
-        next(error); 
+        next(error);
     }
 };
 
-// [POST] api/v1/user/updateUser
+// [PATCH] api/v1/user/updateUser
 exports.updateUser = async (req, res) => {
     try {
         const { _id } = req.user;
-        const { email, phone } = req.body;
-
-        // // Not allowed to update password or role
-        // if (req.body.password || req.body.role) {
-        //     return res.status(400).json({
-        //         success: false,
-        //         message: 'Not allowed to update password or role',
-        //     });
-        // }
-
-        // if (email && !validator.isEmail(email)) {
-        //     return res.status(400).json({
-        //         success: false,
-        //         message: 'Invalid email address',
-        //     });
-        // }
-
-        // if (phone && !/^(0|\+84)[3|5|7|8|9]\d{8}$/.test(phone)) {
-        //     return res.status(400).json({
-        //         success: false,
-        //         message: 'Invalid phone number',
-        //     });
-        // }
-
-        // // Check email and phone number unique
-        // const existingUserEmail = await User.findOne({ email });
-        // const existingUserPhone = await User.findOne({ phone });
-        // if (existingUserEmail && existingUserEmail.id !== _id.toString()) {
-        //     return res.status(400).json({
-        //         success: false,
-        //         message: 'Email already exists',
-        //     });
-        // }
-        // if (existingUserPhone && existingUserPhone.id !== _id.toString()) {
-        //     return res.status(400).json({
-        //         success: false,
-        //         message: 'Phone number already exists',
-        //     });
-        // }
 
         // update user
         const user = await User.findByIdAndUpdate(_id, req.body, { new: true, runValidators: true }).select('-refreshToken -password -role');
@@ -161,3 +126,17 @@ exports.updateUser = async (req, res) => {
     }
 };
 
+// [PACTH] api/v1/user/changePassword
+exports.changePassword = async (req, res) => {
+    try {
+        const { newPassword } = req.body;
+        const { _id } = req.user;
+
+
+        await User.findByIdAndUpdate(_id, { password: newPassword });
+
+        res.json({ message: 'Password changed successfully' });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
