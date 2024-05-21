@@ -5,6 +5,7 @@ const validation = require('../middlewares/validation');
 
 
 router.get('/current', [verifyAccessToken], controllers.getUser);
+router.get('/allUsers', [verifyAccessToken, requireAdmin], controllers.getAllUsers)
 
 router.post('/signUp', [validation.signup], controllers.signup);
 router.post('/login', controllers.login);

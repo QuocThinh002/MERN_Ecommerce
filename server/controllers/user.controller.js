@@ -69,6 +69,16 @@ exports.getUser = async (req, res) => {
     }
 };
 
+// [GET] api/v1/user/allUsers 
+exports.getAllUsers = async (req, res) => {
+    try {
+        const users = await User.find().lean().select('-refreshToken -password -cart -wishlist -addresses');
+        res.json(users);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+}
+
 // [POST] api/v1/user/logout
 exports.logout = async (req, res, next) => {
     try {
