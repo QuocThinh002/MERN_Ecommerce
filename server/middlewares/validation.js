@@ -151,3 +151,14 @@ exports.forgotPassword = async (req, res, next) => {
         res.status(400).json({ success: false, message: error.message });
     }
 };
+
+
+exports.resetPassword = async (req, res, next) => {
+    const { password } = req.body;
+    try {
+        validatePassword(password);
+        next();
+    } catch (error) {
+        res.status(400).json({ success: false, message: error.message });
+    }
+}
