@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const validator = require('validator');
 
@@ -60,15 +60,24 @@ const userSchema = new mongoose.Schema({
             size: { type: String, trim: true },
         }
     ],
-    addresses: [
-        {
-            street: { type: String, trim: true },
-            city: { type: String, trim: true },
-            state: { type: String, trim: true },
-            zip: { type: String, trim: true },
-            country: { type: String, trim: true },
-        }
-    ],
+    addresses: {
+        type: [
+            {
+                street: { type: String, trim: true },
+                city: { type: String, trim: true },
+                state: { type: String, trim: true },
+                zip: { type: String, trim: true },
+                country: { type: String, trim: true },
+            }
+        ],
+        validate: {
+            validator: function (value) {
+                return value.length <= 4;
+            },
+            message: 'You can only have a maximum of 4 addresses',
+        },
+    },
+
     wishlist: [{
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Product',

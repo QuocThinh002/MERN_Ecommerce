@@ -4,7 +4,7 @@ const helmet = require('helmet'); // Enhanced security
 require('dotenv').config(); // Load environment variables;
 
 const connectToDatabase = require('./config/dbconnect'); // Renamed for clarity
-// const apiRoutes = require('./routes/index'); // Renamed for clarity
+const apiRoutes = require('./routes/index.route'); // Renamed for clarity
 
 
 const app = express();
@@ -20,7 +20,7 @@ app.use(helmet()); // Security middleware
 connectToDatabase();
 
 // Routes
-// app.use('/api', apiRoutes); // Group API routes under '/api' prefix
+apiRoutes(app); // Group API routes under '/api' prefix
 
 // Default route (only if no other route matches)
 app.get('/', (req, res) => {
