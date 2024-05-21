@@ -2,6 +2,8 @@ const User = require('../models/user.model');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 
+const sendEmail = require('../ultils/sendMail');
+
 const { generateAccessToken, generateRefreshToken } = require('../middlewares/jwt');
 
 
@@ -12,9 +14,9 @@ exports.signup = async (req, res) => {
 
         await User.create({ fullName, email, phone, password });
 
-        res.status(201).json({ message: 'User created successfully' });
+        res.status(201).json({ success: true, message: 'User created successfully' });
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        res.status(500).json({ success: false, message: error.message });
     }
 };
 
@@ -30,8 +32,8 @@ exports.login = async (req, res) => {
             })
         }
 
-        
-        
+
+
 
         const user = await User.findOne({ email });
         if (!user || !(await user.isPasswordMatch(password))) {
@@ -142,11 +144,41 @@ exports.changePassword = async (req, res) => {
         const { newPassword } = req.body;
         const { _id } = req.user;
 
+        await User.findByIdAndUpdate(_id, { password: newPassword, passwordChangedAt: Date.now() });
 
-        await User.findByIdAndUpdate(_id, { password: newPassword });
-
-        res.json({ message: 'Password changed successfully' });
+        res.status(200).json({ success: true, message: 'Password changed successfully' });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
 };
+
+// [POST] api/v1/user/forgotPassword
+exports.forgotPassword = async (req, res) => {
+    try {
+        const { email } = req.body;
+
+        const user = await User.findOne({ email });
+
+        const subject = 'Forgot Password - StudyHard';
+        const resetToken = user.generatePasswordResetToken();
+        await user.save();
+        const resetURL = `${req.protocol}://${req.get('host')}/api/v1/resetPassword/${resetToken}`;
+
+        // HTML email content
+        const html = `
+            <div style="background-color: #f5f5f5; padding: 20px;">
+                <h2 style="color: #333; text-align: center;">Password Reset</h2>
+                <p style="color: #666; text-align: center;">You requested a password reset. Please click the button below to reset your password:</p>
+                <div style="text-align: center;">
+                <a href="${resetURL}" style="background-color: #007bff; color: #fff; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Reset Password</a>
+                </div>
+                <p style="color: #666; text-align: center;">This link is valid for only 10 minutes.</p>
+                <p style="color: #666; text-align: center;">If you did not request a password reset, please ignore this email.</p>
+            </div>
+            `;
+        const info = await sendEmail({ email, subject, html });
+        res.status(200).json({success: true, info})
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+}

@@ -131,9 +131,5 @@ userSchema.methods.generatePasswordResetToken = function () {
     return resetToken;
 };
 
-// Method to update passwordChangedAt
-userSchema.methods.updatePasswordChangedAt = function () {
-    this.passwordChangedAt = new Date();
-};
 
 module.exports = mongoose.model('User', userSchema);

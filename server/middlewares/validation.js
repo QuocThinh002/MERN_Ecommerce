@@ -40,7 +40,6 @@ const checkExistPhone = async (phone) => {
     }
 }
 
-
 // Middleware to check for duplicate email number
 const checkDuplicateEmail = async (email, userId) => {
     // Check if email already exists, excluding the current user
@@ -80,8 +79,6 @@ exports.signup = (req, res, next) => {
         res.status(400).json({ success: false, message: error.message });
     }
 };
-
-
 
 // Middleware to validate input fields for updating user information
 exports.updateUser = (req, res, next) => {
@@ -137,4 +134,20 @@ exports.changePassword = async (req, res, next) => {
     }
 };
 
+// Middleware to validate forgot password input fields
+// Middleware to handle forgot password input fields
+exports.forgotPassword = async (req, res, next) => {
+    const { email } = req.body;
 
+    try {
+        if (!email) return res.status(400).json({ success: false, message: 'Email is required' });
+        validateEmail(email);
+
+        const user = await User.findOne({ email }).lean();
+        if (!user) return res.status(404).json({ success: false, message: 'There is no user with email address.' });
+
+        next();
+    } catch (error) {
+        res.status(400).json({ success: false, message: error.message });
+    }
+};

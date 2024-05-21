@@ -12,7 +12,7 @@ router.post('/login', controllers.login);
 router.post('/logout', controllers.logout);
 router.post('/changePassword', [verifyAccessToken, validation.changePassword], controllers.changePassword)
 // router.post('/refreshtoken', controllers.refreshAccessToken);
-// router.get('/forgotpassword', controllers.forgotPassword);
+router.post('/forgotPassword', controllers.forgotPassword);
 // router.put('/resetpassword', controllers.resetPassword);
 // router.get('/', [verifyAccessToken, isAdmin], controllers.getUsers);
 // router.delete('/', [verifyAccessToken, isAdmin], controllers.deleteUser);
