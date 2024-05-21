@@ -1,22 +1,23 @@
 const router = require('express').Router();
 const controllers = require('../controllers/user.controller');
-const { verifyToken, requireAdmin } = require('../middlewares/verifyToken');
+const { verifyAccessToken, requireAdmin } = require('../middlewares/verifyAccessToken');
 const validation = require('../middlewares/validation');
 
 
+router.get('/current', [verifyAccessToken], controllers.getUser);
+
 router.post('/signup', [validation.signup, validation.checkDuplicate], controllers.signup);
 router.post('/login', controllers.login);
-router.get('/current', [verifyToken], controllers.getUser);
 // router.post('/refreshtoken', controllers.refreshAccessToken);
-// router.get('/logout', controllers.logout);
+router.post('/logout', controllers.logout);
 // router.get('/forgotpassword', controllers.forgotPassword);
 // router.put('/resetpassword', controllers.resetPassword);
-// router.get('/', [verifyToken, isAdmin], controllers.getUsers);
-// router.delete('/', [verifyToken, isAdmin], controllers.deleteUser);
+// router.get('/', [verifyAccessToken, isAdmin], controllers.getUsers);
+// router.delete('/', [verifyAccessToken, isAdmin], controllers.deleteUser);
 
-router.patch('/updateMyProfile', [verifyToken, validation.update, validation.checkDuplicate], controllers.updateUser);
-// router.put('/address', [verifyToken], controllers.updateUserAddress);
-// router.put('/cart', [verifyToken], controllers.updateCart);
-// router.put('/:uid', [verifyToken, isAdmin], controllers.updateUserByAdmin);
+router.patch('/updateUser', [verifyAccessToken, validation.update, validation.checkDuplicate], controllers.updateUser);
+// router.put('/address', [verifyAccessToken], controllers.updateUserAddress);
+// router.put('/cart', [verifyAccessToken], controllers.updateCart);
+// router.put('/:uid', [verifyAccessToken, isAdmin], controllers.updateUserByAdmin);
 
 module.exports = router;

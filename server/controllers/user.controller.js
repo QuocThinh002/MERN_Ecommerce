@@ -1,43 +1,24 @@
 const User = require('../models/user.model');
 const jwt = require('jsonwebtoken');
-const validator = require('validator');
 const crypto = require('crypto');
 
-const { generateToken, generateRefreshToken } = require('../middlewares/jwt');
+const { generateAccessToken, generateRefreshToken } = require('../middlewares/jwt');
 
 
-
+// [POST] api/v1/user/signup 
 exports.signup = async (req, res) => {
     try {
         const { fullName, email, phone, password } = req.body;
 
-        // // Validation
-        // if (!fullName || !email || !phone || !password) {
-        //     return res.status(400).json({ message: 'All fields are required' });
-        // }
-        // if (!validator.isEmail(email)) {
-        //     return res.status(400).json({ message: 'Invalid email address' });
-        // }
-        // if (!/^(0|\+84)[3|5|7|8|9]\d{8}$/.test(phone)) {
-        //     return res.status(400).json({ message: 'Invalid phone number' });
-        // }
-        // if (await User.findOne({ email })) {
-        //     return res.status(400).json({ message: 'Email already exists' });
-        // }
-        // if (await User.findOne({ phone })) {
-        //     return res.status(400).json({ message: 'Phone number already exists' });
-        // }
+        await User.create({ fullName, email, phone, password });
 
-
-        let user = await User.create({ fullName, email, phone, password });
-
-        res.status(201).json({ message: 'User created successfully'});
+        res.status(201).json({ message: 'User created successfully' });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
 };
 
-
+// [POST] api/v1/user/login
 exports.login = async (req, res) => {
     try {
         const { email, password } = req.body;
@@ -54,14 +35,14 @@ exports.login = async (req, res) => {
             return res.status(401).json({ message: 'Invalid email or password' });
         } else {
             const { password, role, refreshToken, ...userData } = user.toObject();
-            const token = generateToken(user._id, role);
+            const accessToken = generateAccessToken(user._id, role);
             const newRefreshToken = generateRefreshToken(user._id);
 
-            await User.findByIdAndUpdate(user._id, { refreshToken: newRefreshToken }, { new: true });
-            res.cookie('refreshToken', refreshToken, { httpOnly: true, maxAge: 7 * 24 * 60 * 60 * 1000 });
+            await User.findByIdAndUpdate(user._id, { refreshToken: newRefreshToken });
+            res.cookie('refreshToken', newRefreshToken, { httpOnly: true, maxAge: 7 * 24 * 60 * 60 * 1000 });
 
             return res.status(200).json({
-                token,
+                accessToken,
                 user: userData
             })
         }
@@ -70,6 +51,7 @@ exports.login = async (req, res) => {
     }
 };
 
+// [POST] api/v1/user/
 exports.getUser = async (req, res) => {
     try {
         const { _id } = req.user;
@@ -83,8 +65,37 @@ exports.getUser = async (req, res) => {
     }
 };
 
+// [POST] api/v1/user/logout
+exports.logout = async (req, res, next) => {
+    try {
+        const cookies = req.cookies;
 
+        if (!cookies?.refreshToken) return res.sendStatus(204); // not refresh token
+        const refreshToken = cookies.refreshToken;
 
+        const user = await User.findOne({ refreshToken });
+        console.log(user)
+
+        // clear cookie refreshToken
+        res.clearCookie('refreshToken', {
+            httpOnly: true,
+            secure: true, // only send HTTPS (if using)
+        });
+
+        if (!user) 
+            return res.sendStatus(204);
+
+        // clear refreshToken from database
+        user.refreshToken = undefined;
+        await user.save();
+        
+        res.status(200).json({ message: 'Logged out successfully' });
+    } catch (error) {
+        next(error); 
+    }
+};
+
+// [POST] api/v1/user/updateUser
 exports.updateUser = async (req, res) => {
     try {
         const { _id } = req.user;
