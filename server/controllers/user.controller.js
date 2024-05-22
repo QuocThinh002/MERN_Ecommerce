@@ -1,6 +1,4 @@
 const User = require('../models/user.model');
-const jwt = require('jsonwebtoken');
-const crypto = require('crypto');
 
 const sendEmail = require('../ultils/sendMail');
 
@@ -16,7 +14,7 @@ exports.signup = async (req, res) => {
 
         res.status(201).json({ success: true, message: 'User created successfully' });
     } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+        res.status(500).json({ success: false, errorAt: req.originalUrl, message: error.message });
     }
 };
 
@@ -32,18 +30,21 @@ exports.login = async (req, res) => {
             })
         }
 
-
-
-
         const user = await User.findOne({ email });
-        if (!user || !(await user.isPasswordMatch(password))) {
+        if (!user) {
+            return res.status(404).json({ message: 'Email is not registered' });
+        } else if (!(await user.isPasswordMatch(password))) {
             return res.status(401).json({ message: 'Invalid email or password' });
         } else {
-            const { password, role, refreshToken, ...userData } = user.toObject();
-            const accessToken = generateAccessToken(user._id, role);
-            const newRefreshToken = generateRefreshToken(user._id);
+            if (!user.isActive) return res.status(403).json({ success: false, message: "Account is blocked." });
 
-            await User.findByIdAndUpdate(user._id, { refreshToken: newRefreshToken });
+            const { password, role, refreshToken, ...userData } = user.toObject();
+            const accessToken = generateAccessToken(user.id, role);
+            const newRefreshToken = generateRefreshToken(user.id);
+
+            // Update refreshToken in the database
+            user.refreshToken = newRefreshToken;
+            await user.save({ validateBeforeSave: false });
             res.cookie('refreshToken', newRefreshToken, { httpOnly: true, maxAge: 7 * 24 * 60 * 60 * 1000 });
 
             return res.status(200).json({
@@ -52,22 +53,22 @@ exports.login = async (req, res) => {
             })
         }
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        res.status(500).json({ success: false, errorAt: req.originalUrl, message: error.message });
     }
 };
 
 // [GET] api/v1/user/current
 exports.getUser = async (req, res) => {
     try {
-        const { _id } = req.user;
+        const { id } = req.user;
         console.log(req.user)
-        const user = await User.findById(_id).lean().select('-refreshToken -password -role');
+        const user = await User.findById(id).lean().select('-refreshToken -password -role');
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
         }
         res.json(user);
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        res.status(500).json({ success: false, errorAt: req.originalUrl, message: error.message });
     }
 };
 
@@ -77,7 +78,7 @@ exports.getAllUsers = async (req, res) => {
         const users = await User.find().lean().select('-refreshToken -password -cart -wishlist -addresses');
         res.json(users);
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        res.status(500).json({ success: false, errorAt: req.originalUrl, message: error.message });
     }
 }
 
@@ -114,10 +115,10 @@ exports.logout = async (req, res, next) => {
 // [PATCH] api/v1/user/updateUser
 exports.updateUser = async (req, res) => {
     try {
-        const { _id } = req.user;
+        const { id } = req.user;
 
         // update user
-        const user = await User.findByIdAndUpdate(_id, req.body, { new: true, runValidators: true }).select('-refreshToken -password -role');
+        const user = await User.findByIdAndUpdate(id, req.body, { new: true, runValidators: true }).select('-refreshToken -password -role');
 
         if (!user) {
             return res.status(404).json({
@@ -131,10 +132,7 @@ exports.updateUser = async (req, res) => {
             data: { user }
         });
     } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: error.message,
-        });
+        res.status(500).json({ success: false, errorAt: req.originalUrl, message: error.message });
     }
 };
 
@@ -142,13 +140,13 @@ exports.updateUser = async (req, res) => {
 exports.changePassword = async (req, res) => {
     try {
         const { newPassword } = req.body;
-        const { _id } = req.user;
+        const { id } = req.user;
 
-        await User.findByIdAndUpdate(_id, { password: newPassword, passwordChangedAt: Date.now() });
+        await User.findByIdAndUpdate(id, { password: newPassword, passwordChangedAt: Date.now() });
 
         res.status(200).json({ success: true, message: 'Password changed successfully' });
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        res.status(500).json({ success: false, errorAt: req.originalUrl, message: error.message });
     }
 };
 
@@ -177,9 +175,9 @@ exports.forgotPassword = async (req, res) => {
             </div>
             `;
         const info = await sendEmail({ email, subject, html });
-        res.status(200).json({success: true, info})
+        res.status(200).json({ success: true, info })
     } catch (error) {
-        res.status(500).json({success: false, message: error.message });
+        res.status(500).json({ success: false, errorAt: req.originalUrl, message: error.message });
     }
 }
 
@@ -197,9 +195,24 @@ exports.resetPassword = async (req, res) => {
         user.passwordResetToken = undefined;
         user.save();
 
-        res.status(200).json({success: true, message: 'Password reset successfully'})
+        res.status(200).json({ success: true, message: 'Password reset successfully' })
     } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+        res.status(500).json({ success: false, errorAt: req.originalUrl, message: error.message });
     }
 }
+
+exports.deactivateUser = async (req, res) => {
+    try {
+        const { id } = req.user;
+        const user = await User.findByIdAndUpdate(id, { isActive: false }, { new: true });
+        if (!user) return res.status(404).json({ success: false, message: 'User not found!' });
+        user.refreshToken = undefined;
+        user.save();
+
+        res.status(200).json({ success: true, message: 'Account deactivated successfully' })
+    } catch (error) {
+        res.status(500).json({ success: false, errorAt: req.originalUrl, message: error.message });
+    }
+}
+
 

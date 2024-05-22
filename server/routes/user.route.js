@@ -14,7 +14,8 @@ router.post('/changePassword', [verifyAccessToken, validation.changePassword], c
 // router.post('/refreshtoken', controllers.refreshAccessToken);
 router.post('/forgotPassword', controllers.forgotPassword);
 router.post('/resetpassword', [validation.resetPassword], controllers.resetPassword);
-// router.get('/', [verifyAccessToken, isAdmin], controllers.getUsers);
+router.post('/deactivateUser', [verifyAccessToken], controllers.deactivateUser);
+// changeMulti(tham khảo youtube studio)
 // router.delete('/', [verifyAccessToken, isAdmin], controllers.deleteUser);
 
 router.patch('/updateUser', [verifyAccessToken, validation.updateUser], controllers.updateUser);
