@@ -78,14 +78,14 @@ exports.signup = async (req, res, next) => {
 
         next();
     } catch (error) {
-        return res.status(500).json({ success: false, errorAt: req.originalUrl, message: error.message }); // Use return for clarity
+        res.status(500).json({ success: false, errorAt: req.originalUrl, message: error.message }); // Use return for clarity
     }
 };
 
 // Middleware to validate input fields for updating user information
 exports.updateUser = async (req, res, next) => {
     const { email, phone } = req.body;
-    const { id } = req.user;
+    const { userId } = req.user;
 
     try {
         // Disallow updating password or role
@@ -95,8 +95,8 @@ exports.updateUser = async (req, res, next) => {
         let errors = [];
         const emailError = validateEmail(email);
         const phoneError = validatePhone(phone);
-        const duplicateEmailError = await checkDuplicateEmail(email, id);
-        const duplicatePhoneError = await checkDuplicatePhone(phone, id);
+        const duplicateEmailError = await checkDuplicateEmail(email, userId);
+        const duplicatePhoneError = await checkDuplicatePhone(phone, userId);
 
         if (emailError) errors.push(emailError);
         if (phoneError) errors.push(phoneError);
@@ -109,14 +109,40 @@ exports.updateUser = async (req, res, next) => {
 
         next();
     } catch (error) {
-        return res.status(500).json({ success: false, errorAt: req.originalUrl, message: error.message }); // Use return for clarity
+        res.status(500).json({ success: false, errorAt: req.originalUrl, message: error.message }); // Use return for clarity
+    }
+};
+
+exports.updateUserByAdmin = async (req, res, next) => {
+    const { email, phone } = req.body;
+    const { userId } = req.params;
+
+    try {
+        let errors = [];
+        const emailError = validateEmail(email);
+        const phoneError = validatePhone(phone);
+        const duplicateEmailError = await checkDuplicateEmail(email, userId);
+        const duplicatePhoneError = await checkDuplicatePhone(phone, userId);
+
+        if (emailError) errors.push(emailError);
+        if (phoneError) errors.push(phoneError);
+        if (duplicateEmailError) errors.push(duplicateEmailError);
+        if (duplicatePhoneError) errors.push(duplicatePhoneError);
+
+        if (errors.length > 0) {
+            return res.status(400).json({ success: false, errors });
+        }
+
+        next();
+    } catch (error) {
+        res.status(500).json({ success: false, errorAt: req.originalUrl, message: error.message }); // Use return for clarity
     }
 };
 
 // Middleware to validate change password input fields
 exports.changePassword = async (req, res, next) => {
     const { currentPassword, newPassword } = req.body;
-    const { id } = req.user;
+    const { userId } = req.user;
 
     try {
         // Check if both current and new passwords are provided
@@ -130,7 +156,7 @@ exports.changePassword = async (req, res, next) => {
             return res.status(400).json({ success: false, passwordError });
         }
 
-        const user = await User.findById(id);
+        const user = await User.findById(userId);
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
         }
@@ -141,12 +167,11 @@ exports.changePassword = async (req, res, next) => {
 
         next();
     } catch (error) {
-        return res.status(500).json({ success: false, errorAt: req.originalUrl, message: error.message }); // Use return for clarity
+        res.status(500).json({ success: false, errorAt: req.originalUrl, message: error.message }); // Use return for clarity
     }
 };
 
 // Middleware to validate forgot password input fields
-// Middleware to handle forgot password input fields
 exports.forgotPassword = async (req, res, next) => {
     const { email } = req.body;
 
@@ -160,13 +185,12 @@ exports.forgotPassword = async (req, res, next) => {
 
         const user = await User.findOne({ email }).lean();
         if (!user) return res.status(404).json({ success: false, message: 'There is no user with email address.' });
-
+        if (!user.isActive) return res.status(403).json({ success: false, message: 'Account was deactivated' });
         next();
     } catch (error) {
-        return res.status(500).json({ success: false, errorAt: req.originalUrl, message: error.message });
+        res.status(500).json({ success: false, errorAt: req.originalUrl, message: error.message });
     }
 };
-
 
 exports.resetPassword = async (req, res, next) => {
     const { password } = req.body;
@@ -179,6 +203,6 @@ exports.resetPassword = async (req, res, next) => {
 
         next();
     } catch (error) {
-        return res.status(500).json({ success: false, errorAt: req.originalUrl, message: error.message });
+        res.status(500).json({ success: false, errorAt: req.originalUrl, message: error.message });
     }
 }

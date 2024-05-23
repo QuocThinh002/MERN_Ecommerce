@@ -1,26 +1,34 @@
 const router = require('express').Router();
-const controllers = require('../controllers/user.controller');
+const userController = require('../controllers/user.controller');
 const { verifyAccessToken, requireAdmin } = require('../middlewares/verifyAccessToken');
 const validation = require('../middlewares/validation');
 
+// CRUD - CREATE READ UPDATE DELETE
 
-router.get('/current', [verifyAccessToken], controllers.getUser);
-router.get('/allUsers', [verifyAccessToken, requireAdmin], controllers.getAllUsers)
+// CREATE
+router.post('/signUp', [validation.signup], userController.signup);
 
-router.post('/signUp', [validation.signup], controllers.signup);
-router.post('/login', controllers.login);
-router.post('/logout', controllers.logout);
-router.post('/changePassword', [verifyAccessToken, validation.changePassword], controllers.changePassword)
-// router.post('/refreshtoken', controllers.refreshAccessToken);
-router.post('/forgotPassword', controllers.forgotPassword);
-router.post('/resetpassword', [validation.resetPassword], controllers.resetPassword);
-router.post('/deactivateUser', [verifyAccessToken], controllers.deactivateUser);
-// changeMulti(tham khảo youtube studio)
-// router.delete('/', [verifyAccessToken, isAdmin], controllers.deleteUser);
+// READ
+router.get('/me', [verifyAccessToken], userController.getUser);
+router.get('/', [verifyAccessToken, requireAdmin], userController.getAllUsers);
+router.get('/:userId', [verifyAccessToken, requireAdmin], userController.getUserById);
 
-router.patch('/updateUser', [verifyAccessToken, validation.updateUser], controllers.updateUser);
-// router.put('/address', [verifyAccessToken], controllers.updateUserAddress);
-// router.put('/cart', [verifyAccessToken], controllers.updateCart);
-// router.put('/:uid', [verifyAccessToken, isAdmin], controllers.updateUserByAdmin);
+// UPDATE
+router.patch('/me', [verifyAccessToken, validation.updateUser], userController.updateMe);
+router.patch('/:userId', [verifyAccessToken, validation.updateUserByAdmin, requireAdmin], userController.updateUserByAdmin);
+router.patch('/deactivate', [verifyAccessToken], userController.deactivateUser);
+router.patch('/changePassword', [verifyAccessToken, validation.changePassword], userController.changePassword)
+
+// DELETE
+
+
+// router.post('/refreshtoken', userController.refreshAccessToken);
+
+// changeMulti(tham khảo gmail)
+// router.delete('/', [verifyAccessToken, isAdmin], userController.deleteUser);
+
+// router.put('/address', [verifyAccessToken], userController.updateUserAddress);
+// router.put('/cart', [verifyAccessToken], userController.updateCart);
+
 
 module.exports = router;

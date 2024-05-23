@@ -12,7 +12,7 @@ const sendEmail = async (options) => {
   });
 
   const mailOptions = {
-    from: `"customer support" <no-reply@studyhard.com>`,
+    from: `"StudyHard" <no-reply@studyhard.com>`,
     to: options.email,
     subject: options.subject,
     html: options.html,
